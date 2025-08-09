@@ -1,99 +1,115 @@
-# Credence: Uncollateralized Loans Protocol
+# Credence: Enhanced Uncollateralized Loans Protocol
 
-This Clarity smart contract implements an **uncollateralized loans protocol** for the Stacks blockchain. It coordinates four participant roles: **Borrowers**, **Backers**, **Liquidity Providers (LPs)**, and **Auditors**. The protocol enables trustless lending and borrowing without collateral, using auditor approvals and backer stakes for risk mitigation.
+A robust Clarity smart contract implementing an **uncollateralized loans protocol** with advanced security features, risk assessment, and economic incentives. The protocol coordinates four participant roles while ensuring secure, transparent loan management.
 
----
+## Core Features
 
-## Features
+### Security Enhancements
+- Reentrancy protection
+- Contract pause functionality
+- Rate limiting on actions
+- Role-based access control
+- Emergency operator system
 
-- **Borrowers** can apply for loans and repay them.
-- **Backers** stake funds to support borrowers.
-- **Auditors** vote to approve or reject loan requests.
-- **Liquidity Providers (LPs)** deposit and withdraw liquidity for the loan pool.
-- **Admin** manages loan disbursement, slashing backers on default, and can transfer admin rights.
+### Financial Features
+- Dynamic interest rates based on credit scores
+- Platform fees and backer rewards
+- Reputation-based risk assessment
+- LP reward tracking
 
----
+### Participant Roles
+- **Borrowers**: Apply for and repay loans with interest
+- **Backers**: Stake funds with reward incentives
+- **Auditors**: Vote on loan approvals
+- **LPs**: Provide liquidity with reward tracking
+- **Admin**: Manage protocol parameters and emergency actions
 
-## Data Structures
+## Technical Components
 
-- **loans**: Maps borrower to loan details (amount, duration, approval, disbursement, repayment, due time).
-- **backers**: Tracks backer stakes for each borrower.
-- **audits**: Records auditor votes for each borrower.
-- **vote-counts**: Tracks yes/no votes from auditors per borrower.
-- **pool-balance**: Total liquidity available for loans.
-- **lps**: Tracks each LP’s deposit.
-- **admin**: Stores the admin principal.
+### Interest & Risk Management
+```clarity
+BASE_INTEREST_RATE: 5%
+PLATFORM_FEE_RATE: 1%
+BACKER_REWARD_RATE: 2%
+MAX_INTEREST_RATE: 20%
+```
 
----
+### Borrower Reputation System
+- Tracks loan history
+- Calculates credit scores
+- Adjusts interest rates based on risk
+- Records defaults and successful repayments
+
+### Enhanced Security Features
+- Transaction rate limiting
+- Emergency pause/unpause
+- Authorized operator management
+- Reentrancy protection
 
 ## Core Functions
 
-### Borrower Actions
+### Enhanced Borrower Actions
+- `apply-loan(amount, duration)`: Request loan with credit assessment
+- `repay-loan()`: Repay loan with interest distribution
 
-- `apply-loan(amount, duration)`: Request a loan.
-- `repay-loan()`: Repay a disbursed loan.
+### Enhanced Backer Actions
+- `back-borrower(borrower, stake)`: Stake with reward tracking
 
-### Backer Actions
+### Enhanced LP Actions
+- `deposit-liquidity(amount)`: Deposit with reward tracking
+- `withdraw-liquidity(amount)`: Withdraw with earned rewards
 
-- `back-borrower(borrower, stake)`: Stake funds to support a borrower.
+### Admin & Security Actions
+- `emergency-pause()`: Pause contract operations
+- `emergency-unpause()`: Resume operations
+- `add-emergency-operator(operator)`: Add emergency admin
+- `set-base-interest-rate(rate)`: Adjust base interest
+- `set-platform-fee-rate(rate)`: Modify platform fees
 
-### Auditor Actions
+### New Read Functions
+- `get-borrower-reputation(borrower)`
+- `get-credit-score(borrower)`
+- `get-contract-status()`
+- `get-total-interest-earned()`
+- `is-emergency-operator-check(operator)`
 
-- `audit-borrower(borrower, approve)`: Vote to approve or reject a borrower’s loan request.
+## Validation & Security
 
-### LP Actions
+- Principal address validation
+- Amount and duration bounds
+- Role-based access control
+- Rate limiting on key actions
+- Reentrancy protection
+- Emergency controls
 
-- `deposit-liquidity(amount)`: Deposit funds into the pool.
-- `withdraw-liquidity(amount)`: Withdraw funds from the pool.
+## Error Handling
 
-### Admin Actions
+Enhanced error codes including:
+```clarity
+ERR_CONTRACT_PAUSED: u112
+ERR_REENTRANCY: u113
+ERR_RATE_LIMITED: u114
+```
 
-- `disburse-loan(borrower)`: Disburse loan if approved by at least 2 auditors.
-- `slash-backer(borrower, backer)`: Remove a backer’s stake if borrower defaults.
-- `set-admin(new-admin)`: Transfer admin rights.
+## Deployment & Administration
 
-### Read-only Functions
+1. Deploy contract
+2. Set initial admin
+3. Configure emergency operators
+4. Set interest rates and fees
+5. Monitor contract status
 
-- `get-loan(user)`: Get loan details for a user.
-- `get-backer-stake(borrower, backer)`: Get backer’s stake for a borrower.
-- `get-audit-vote(borrower, auditor)`: Get auditor’s vote for a borrower.
-- `get-vote-count(borrower)`: Get auditor vote counts for a borrower.
-- `get-pool-balance()`: Get current pool balance.
-- `get-lp-deposit(provider)`: Get LP’s deposit.
-- `get-admin()`: Get current admin principal.
+## Security Considerations
 
----
-
-## Validation & Error Handling
-
-- Strict input validation for principals, amounts, durations, and authorization.
-- Error codes for unauthorized actions, invalid inputs, insufficient funds, and other failure cases.
-
----
-
-## Usage Example
-
-1. **Borrower** applies for a loan.
-2. **Backers** stake to support the borrower.
-3. **Auditors** vote to approve/reject the loan.
-4. **Admin** disburses the loan if approved.
-5. **Borrower** repays the loan.
-6. **Admin** slashes backers if borrower defaults.
-
----
-
-## Deployment
-
-Deploy the contract to the Stacks blockchain using the Clarity language. Ensure the admin principal is set correctly.
-
----
+- Regular security audits recommended
+- Monitor emergency operator actions
+- Review rate limits and thresholds
+- Track reputation system metrics
 
 ## License
 
-This contract is provided for educational and experimental purposes. Please review and audit before deploying in production.
+This enhanced contract is provided for educational and experimental purposes. Professional security audit recommended before production deployment.
 
 ---
 
-## Contact
-
-For questions or contributions, open an issue or pull request in the repository.
+For technical details and implementation specifics, refer to the contract documentation and code comments.
