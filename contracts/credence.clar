@@ -20,6 +20,7 @@
 (define-constant ERR_CONTRACT_PAUSED u112)
 (define-constant ERR_REENTRANCY u113)
 (define-constant ERR_RATE_LIMITED u114)
+(define-constant ERR_ALREADY_PROCESSED u115)
 
 ;; Constants for validation
 (define-constant MAX_LOAN_AMOUNT u1000000000000) ;; 1M STX in microSTX
@@ -135,6 +136,12 @@
     defaults: uint,
     credit-score: uint
   }
+)
+
+;; Add status tracking for withdrawals
+(define-map withdrawal-status
+  { tx-sender: principal, block: uint }
+  { processed: bool }
 )
 
 ;; === UTILITY FUNCTIONS ===
@@ -414,10 +421,10 @@
   )
 )
 
-;; Enhanced LP withdrawal
+;; FIXED: Enhanced LP withdrawal with proper reentrancy protection and transaction tracking
 (define-public (withdraw-liquidity (amount uint))
-  (let ((user-deposit (map-get? lps tx-sender)))
-    ;; Security checks
+  (begin
+    ;; Security checks FIRST
     (try! (check-pause))
     (try! (check-reentrancy))
     
@@ -425,24 +432,34 @@
     (asserts! (> amount u0) (err ERR_INVALID_AMOUNT))
     (asserts! (is-valid-principal tx-sender) (err ERR_INVALID_PRINCIPAL))
     
-    (match user-deposit lp
-      (begin
-        (asserts! (>= (get deposit lp) amount) (err ERR_INSUFFICIENT))
-        (asserts! (>= (var-get pool-balance) amount) (err ERR_INSUFFICIENT))
-        (map-set lps
-          tx-sender
-          { 
-            deposit: (- (get deposit lp) amount),
-            rewards-earned: (get rewards-earned lp),
-            last-deposit-block: (get last-deposit-block lp)
-          }
-        )
-        (var-set pool-balance (- (var-get pool-balance) amount))
-        (try! (as-contract (stx-transfer? amount tx-sender tx-sender)))
-        (clear-reentrancy)
-        (ok true)
-      )
-      (err ERR_NOT_FOUND)
+    ;; Check withdrawal status to prevent double-processing
+    (asserts! (is-none (map-get? withdrawal-status 
+                        { tx-sender: tx-sender, block: stacks-block-height }))
+              (err ERR_ALREADY_PROCESSED))
+    
+    (let ((user-deposit (unwrap! (map-get? lps tx-sender) (err ERR_NOT_FOUND))))
+      ;; Validation BEFORE state changes
+      (asserts! (>= (get deposit user-deposit) amount) (err ERR_INSUFFICIENT))
+      (asserts! (>= (var-get pool-balance) amount) (err ERR_INSUFFICIENT))
+      
+      ;; State updates BEFORE external call
+      (map-set withdrawal-status
+        { tx-sender: tx-sender, block: stacks-block-height }
+        { processed: true })
+      
+      (map-set lps tx-sender {
+        deposit: (- (get deposit user-deposit) amount),
+        rewards-earned: (get rewards-earned user-deposit),
+        last-deposit-block: (get last-deposit-block user-deposit)
+      })
+      
+      (var-set pool-balance (- (var-get pool-balance) amount))
+      
+      ;; Clear reentrancy guard BEFORE external call
+      (clear-reentrancy)
+      
+      ;; External call LAST
+      (as-contract (stx-transfer? amount tx-sender tx-sender))
     )
   )
 )
@@ -625,6 +642,7 @@
 (define-public (remove-emergency-operator (operator principal))
   (begin
     (asserts! (is-eq tx-sender (var-get admin)) (err ERR_UNAUTHORIZED))
+    (asserts! (is-some (map-get? emergency-operators operator)) (err ERR_NOT_FOUND))
     (map-set emergency-operators operator { authorized: false })
     (ok true)
   )
@@ -726,6 +744,11 @@
 
 (define-read-only (is-emergency-operator-check (operator principal))
   (is-emergency-operator operator)
+)
+
+;; New read-only function to check withdrawal status
+(define-read-only (get-withdrawal-status (user principal) (block uint))
+  (map-get? withdrawal-status { tx-sender: user, block: block })
 )
 
 ;; === ADMIN FUNCTIONS ===
