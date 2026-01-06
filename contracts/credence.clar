@@ -437,7 +437,10 @@
                         { tx-sender: tx-sender, block: stacks-block-height }))
               (err ERR_ALREADY_PROCESSED))
     
-    (let ((user-deposit (unwrap! (map-get? lps tx-sender) (err ERR_NOT_FOUND))))
+    (let (
+      (user-deposit (unwrap! (map-get? lps tx-sender) (err ERR_NOT_FOUND)))
+      (recipient contract-caller)
+    )
       ;; Validation BEFORE state changes
       (asserts! (>= (get deposit user-deposit) amount) (err ERR_INSUFFICIENT))
       (asserts! (>= (var-get pool-balance) amount) (err ERR_INSUFFICIENT))
@@ -459,7 +462,7 @@
       (clear-reentrancy)
       
       ;; External call LAST
-      (as-contract (stx-transfer? amount tx-sender tx-sender))
+      (as-contract (stx-transfer? amount tx-sender recipient))
     )
   )
 )
@@ -760,7 +763,4 @@
     (asserts! (is-valid-principal new-admin) (err ERR_INVALID_PRINCIPAL))
     (asserts! (not (is-eq new-admin tx-sender)) (err ERR_UNAUTHORIZED))
     
-    (var-set admin new-admin)
-    (ok true)
-  )
-)
+ 
